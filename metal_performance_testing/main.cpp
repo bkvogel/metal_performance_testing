@@ -323,7 +323,7 @@ void run_interleaved() {
 int main(int argc, char *argv[])
 {
     // Matrix multiplication example using each shader.
-    //run_mat_mult_shaders();
+    run_mat_mult_shaders();
     
     // Run interleaved computations on CPU and GPU.
     run_interleaved();
