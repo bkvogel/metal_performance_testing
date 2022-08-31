@@ -12,7 +12,7 @@
 // We could optionally create a "shader_types" namespace here to contain our structs,
 // but maybe it's not needed for such a small project.
 
-// Used by mat_mul_simple1 shader.
+// Used by the matrix multiplication shaders.
 typedef struct
 {
     unsigned int row_dim_x; // Number of rows in X

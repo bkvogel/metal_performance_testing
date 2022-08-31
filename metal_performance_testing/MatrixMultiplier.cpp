@@ -47,8 +47,7 @@ void MatrixMultiplier::change_shader(std::string shader_name) {
         return;
     }
     
-    // Calculate a threadgroup size.
-    NS::UInteger thread_execution_width = m_MatMultiplyFunctionPSO->threadExecutionWidth(); // 32
+    NS::UInteger thread_execution_width = m_MatMultiplyFunctionPSO->threadExecutionWidth();
     cout << "FYI, the thread execution wdith is: " << thread_execution_width << endl;
     NS::UInteger max_total_threads_per_threadgroup = m_MatMultiplyFunctionPSO->maxTotalThreadsPerThreadgroup();
     cout << "FYI, the maximum allowed threads per threadgoup is: " << max_total_threads_per_threadgroup << endl;

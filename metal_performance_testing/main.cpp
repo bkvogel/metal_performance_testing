@@ -66,7 +66,7 @@ void run_mat_mult_shaders() {
     //const int cols_X = 8192;
     //const int inner_dim = 8192;
     
-    cout << "Running the matrix multiplication example." << endl;
+    cout << "Running Experiments 1 and 2: matrix multiplication example with naive and optimized shaders." << endl;
     
     // Get the GPU device.
     MTL::Device *device = MTL::CreateSystemDefaultDevice();
@@ -171,9 +171,7 @@ void run_mat_mult_shaders() {
 }
 
 void run_interleaved() {
-    // Perform matrix multiplication using custom shaders:
-    // - simple custom shader with no optimization.
-    // - optimized custom shader ported from existing CUDA kernel.
+    // Run interleaved CPU/GPU exeriment (see README for description)
     //
     // Computes:
     // X <- A * B
@@ -183,6 +181,8 @@ void run_interleaved() {
     // X size: rows_X x cols_X
     // A size: rows_X x inner_dim
     // B size: inner_dim x cols_X
+    //
+    // and interleave it with "touch" or relu operation and compute timings.
     
     // Arbitrary matrix sizes are supported!
     
@@ -220,7 +220,7 @@ void run_interleaved() {
     //const int cols_X = 8192;
     //const int inner_dim = 8192;
     
-    cout << "Running the matrix multiplication example." << endl;
+    cout << "Running Experiment 3: Interleaving CPU and GPU computations." << endl;
     
     // Get the GPU device.
     MTL::Device *device = MTL::CreateSystemDefaultDevice();
