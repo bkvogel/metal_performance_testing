@@ -48,7 +48,7 @@ It should then build and run. (although I have not tested that it works on anoth
 ### Performance results and notes
 
 The following results are for a 2021 Macbook Pro with M1 Max and 64 GB RAM.
-The code was run in release mode with clang optimization flags `-O3 -ffast-math -mcpu=apple-m1`.
+The code was run in release mode with clang optimization flags `-O3 -ffast-math`.
 
 #### Experiment 1: Performance of the naive shader
 
