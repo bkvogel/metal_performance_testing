@@ -93,8 +93,6 @@ void run_mat_mult_shaders() {
         int loop_count = 200;
         for (int n = 0; n != loop_count; ++n)
         {
-            // todo: try interleaving with other CPU computations here.
-            //multiplier.touch_data_cpu();
             // Perform the multiplication
             multiplier.run_multiply_on_gpu();
         }
@@ -121,8 +119,6 @@ void run_mat_mult_shaders() {
         int loop_count = 200;
         for (int n = 0; n != loop_count; ++n)
         {
-            // todo: try interleaving with other CPU computations here.
-            //multiplier.touch_data_cpu();
             // Perform the multiplication
             multiplier.run_multiply_on_gpu();
         }
@@ -158,8 +154,6 @@ void run_mat_mult_shaders() {
         int loop_count = 200;
         for (int n = 0; n != loop_count; ++n)
         {
-            // todo: try interleaving with other CPU computations here.
-            //multiplier.touch_data_cpu();
             // Perform the multiplication
             multiplier.run_on_cpu_accelerate_blas();
         }
