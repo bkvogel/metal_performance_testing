@@ -33,6 +33,8 @@ The `main.cpp` file contains a function to run each experiment, which performs t
 
 Note: This repo uses C++ and Metal only. If you are simply looking for Metal matrix multiplication shader examples to use in your Swift code, I suspect these will work (i.e., the .metal files), but you will then need to write your own Swift code to call them.
 
+I have also included [Metal-cpp](https://developer.apple.com/metal/cpp/) in this repository (in the `metal-cpp` folder) so that you will be able to build and run the examples without having to download and install it as an additional step. Note that the license allows redistribution.
+
 -----------
 ### Install and setup
 
