@@ -9,9 +9,9 @@
 #include "ShaderParams.h"
 using namespace metal;
  
-kernel void mat_mul_simple1(device const float* inA,
-                            device const float* inB,
-                            device float* result,
+kernel void mat_mul_simple1(device const float* A,
+                            device const float* B,
+                            device float* X,
                             constant MatMulParams& params,
                             uint2 id [[ thread_position_in_grid ]])
 {
@@ -25,7 +25,6 @@ kernel void mat_mul_simple1(device const float* inA,
         // id.x is the column index of the result matrix.
         // id.y is the row index of the result matrix.
         const uint index = id.y*col_dim_x + id.x;
-        
         float sum = 0;
         for (uint k = 0; k < inner_dim; ++k) {
             // index_A corresponds to A[id.y, k]
@@ -34,8 +33,8 @@ kernel void mat_mul_simple1(device const float* inA,
             // index_B corresponds to B[k, id.x]
             const uint index_B = k*col_dim_x + id.x;
 
-            sum += inA[index_A] * inB[index_B];
+            sum += A[index_A] * B[index_B];
         }
-        result[index] = sum;
+        X[index] = sum;
     }
 }

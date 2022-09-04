@@ -47,12 +47,10 @@ kernel void mat_mul_opt1(device const float* A,
         // Read the values into 4x4 submatrices Asub and Bsub.
         for (uint j = 0; j < 4; ++j) { // column offset into X
             for (uint i = 0; i < 4; ++i) { // row offset into X
-                // index_A corresponds to A[idy + i, k + j]
-                const uint index_A = (idy + i)*inner_dim + k + j;
-                Asub[j][i] = A[index_A];
-                // index_B corresponds to B[k + i, idx + j]
-                const uint index_B = (k + i)*col_dim_x + idx + j;
-                Bsub[j][i] = B[index_B];
+                // corresponds to A[idy + i, k + j]
+                Asub[j][i] = A[(idy + i)*inner_dim + k + j];
+                // corresponds to B[k + i, idx + j]
+                Bsub[j][i] = B[(k + i)*col_dim_x + idx + j];
             }
         }
         // Multiply the two 4x4 submatrices and accumulate the result.
