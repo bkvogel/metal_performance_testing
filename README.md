@@ -99,7 +99,7 @@ Here I used the naive algorithm as a starting point and then modified it so that
 
 Performance results: (threadgroup size is 8x8 unless otherwise specified)
 
-| Implementation | A size | B size | GFLOPS |
+| Implementation | Input matrix A size | Input matrix B size | GFLOPS |
 |----------------|--------|--------|--------|
 | Naive CPU | 256x256 | 256x256 |2.17 |
 | `mat_mul_simple1` | 256x256 | 256x256 | 76.4 |
