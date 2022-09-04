@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7E2700C428C4838000123C8B /* mat_mul_opt1.metal in Sources */ = {isa = PBXBuildFile; fileRef = 7E2700C328C4838000123C8B /* mat_mul_opt1.metal */; };
 		7E580CEC28B9D0300069ED46 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E580CEB28B9D0300069ED46 /* main.cpp */; };
 		7EA4C74B28B9D274008E3BE4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EA4C74A28B9D274008E3BE4 /* Foundation.framework */; };
 		7EA4C74D28B9D282008E3BE4 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EA4C74C28B9D282008E3BE4 /* QuartzCore.framework */; };
@@ -33,6 +34,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7E2700C328C4838000123C8B /* mat_mul_opt1.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = mat_mul_opt1.metal; sourceTree = "<group>"; };
 		7E580CE828B9D0300069ED46 /* metal_performance_testing */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = metal_performance_testing; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E580CEB28B9D0300069ED46 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		7EA4C6F328B9D186008E3BE4 /* MTLTypes.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = MTLTypes.hpp; sourceTree = "<group>"; };
@@ -184,6 +186,7 @@
 				7EFB290E28BB0DCE00FEC718 /* Assertions.cpp */,
 				7EFB290F28BB0DCE00FEC718 /* Assertions.h */,
 				7EFB291428BB0DCE00FEC718 /* Matrix.cpp */,
+				7E2700C328C4838000123C8B /* mat_mul_opt1.metal */,
 				7EFB290C28BB0DCE00FEC718 /* Matrix.h */,
 				7ED04C1228BDB06500783D69 /* MatrixMultiplier.h */,
 				7ED04C1128BDB06500783D69 /* MatrixMultiplier.cpp */,
@@ -389,6 +392,7 @@
 				7E580CEC28B9D0300069ED46 /* main.cpp in Sources */,
 				7ED04C0828BC2E0C00783D69 /* mat_mul_simple1.metal in Sources */,
 				7EFB291628BB0DCE00FEC718 /* Assertions.cpp in Sources */,
+				7E2700C428C4838000123C8B /* mat_mul_opt1.metal in Sources */,
 				7ED04C0F28BD85E400783D69 /* mat_mul_optimized_nv.metal in Sources */,
 				7ED3BFFE28BB39A9009FBFB5 /* Utilities.cpp in Sources */,
 			);

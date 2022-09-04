@@ -44,29 +44,27 @@ void run_mat_mult_shaders() {
     //const int cols_X = 1156;
     //const int inner_dim = 789;
     
-    const int rows_X = 1024;
-    const int cols_X = 1024;
-    const int inner_dim = 1024;
+    //const int rows_X = 1024;
+    //const int cols_X = 1024;
+    //const int inner_dim = 1024;
     
-    //const int rows_X = 2048;
-    //const int cols_X = 2048;
-    //const int inner_dim = 2048;
+    const int rows_X = 2048;
+    const int cols_X = 2048;
+    const int inner_dim = 2048;
     
     //const int rows_X = 3000;
     //const int cols_X = 4000;
     //const int inner_dim = 5000;
     
-    
     //const int rows_X = 20000;
     //const int cols_X = 20000;
     //const int inner_dim = 20000;
-    
     
     //const int rows_X = 8192;
     //const int cols_X = 8192;
     //const int inner_dim = 8192;
     
-    cout << "Running Experiments 1 and 2: matrix multiplication example with naive and optimized shaders." << endl;
+    cout << "Running Experiments 1 through 3: matrix multiplication example with naive and optimized shaders." << endl;
     
     // Get the GPU device.
     MTL::Device *device = MTL::CreateSystemDefaultDevice();
@@ -103,9 +101,9 @@ void run_mat_mult_shaders() {
         cout << "\n-------------------------\n" << endl;
     }
     
-    // Switch to the optimized shader.
-    const string shader_name_optimized = "mat_mul_optimized_nv";
-    multiplier.change_shader(shader_name_optimized);
+    // Switch to the NVIDIA example optimized shader.
+    const string shader_name_nv_optimized = "mat_mul_optimized_nv";
+    multiplier.change_shader(shader_name_nv_optimized);
     multiplier.initialize_data();
     // Perform the multiplication
     multiplier.run_multiply_on_gpu();
@@ -113,7 +111,7 @@ void run_mat_mult_shaders() {
     multiplier.check_results();
     
     {
-        cout << "Running benchmark for Metal shader: " << shader_name_optimized << endl;
+        cout << "Running benchmark for Metal shader: " << shader_name_nv_optimized << endl;
         using namespace std::chrono;
         auto t0 = high_resolution_clock::now();
         int loop_count = 200;
@@ -121,6 +119,32 @@ void run_mat_mult_shaders() {
         {
             // Perform the multiplication
             multiplier.run_multiply_on_gpu();
+        }
+        auto t1 = high_resolution_clock::now();
+        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
+        double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
+        cout << gflops << " GFLOPS" << endl;
+        cout << "\n-------------------------\n" << endl;
+    }
+    
+    // Switch to the my optimized shader.
+    const string shader_name_mat_mul_opt1 = "mat_mul_opt1";
+    multiplier.change_shader(shader_name_mat_mul_opt1);
+    multiplier.initialize_data();
+    // Perform the multiplication
+    multiplier.run_multiply_on_gpu_mat_mul_opt1();
+    // Verify that it computes the correct result
+    multiplier.check_results();
+    
+    {
+        cout << "Running benchmark for Metal shader: " << shader_name_mat_mul_opt1 << endl;
+        using namespace std::chrono;
+        auto t0 = high_resolution_clock::now();
+        int loop_count = 200;
+        for (int n = 0; n != loop_count; ++n)
+        {
+            // Perform the multiplication
+            multiplier.run_multiply_on_gpu_mat_mul_opt1();
         }
         auto t1 = high_resolution_clock::now();
         auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
@@ -214,20 +238,20 @@ void run_interleaved() {
     //const int cols_X = 8192;
     //const int inner_dim = 8192;
     
-    cout << "Running Experiment 3: Interleaving CPU and GPU computations." << endl;
+    cout << "Running Experiment 4: Interleaving CPU and GPU computations." << endl;
     
     // Get the GPU device.
     MTL::Device *device = MTL::CreateSystemDefaultDevice();
    
     // The name of the shader to run.
-    const string shader_name = "mat_mul_optimized_nv";
+    const string shader_name = "mat_mul_opt1";
     
     MatrixMultiplier multiplier(device, shader_name);
     multiplier.allocate_memory(rows_X, cols_X, inner_dim);
     multiplier.initialize_data();
     
     // Perform the multiplication
-    multiplier.run_multiply_on_gpu();
+    multiplier.run_multiply_on_gpu_mat_mul_opt1();
     
     // Verify that it computes the correct result
     multiplier.check_results();
@@ -241,7 +265,7 @@ void run_interleaved() {
         int loop_count = 200;
         for (int n = 0; n != loop_count; ++n)
         {
-            multiplier.run_multiply_on_gpu();
+            multiplier.run_multiply_on_gpu_mat_mul_opt1();
         }
         auto t1 = high_resolution_clock::now();
         auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
@@ -263,7 +287,7 @@ void run_interleaved() {
             // Modify a tiny part of the matrix data.
             multiplier.touch_data_cpu();
             // Perform the multiplication
-            multiplier.run_multiply_on_gpu();
+            multiplier.run_multiply_on_gpu_mat_mul_opt1();
         }
         auto t1 = high_resolution_clock::now();
         auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
@@ -283,7 +307,7 @@ void run_interleaved() {
             // Modify a tiny part of the matrix data.
             multiplier.relu_cpu();
             // Perform the multiplication
-            multiplier.run_multiply_on_gpu();
+            multiplier.run_multiply_on_gpu_mat_mul_opt1();
         }
         auto t1 = high_resolution_clock::now();
         auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();

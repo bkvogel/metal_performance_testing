@@ -171,6 +171,47 @@ void MatrixMultiplier::run_multiply_on_gpu()
     commandBuffer->waitUntilCompleted();
 }
 
+void MatrixMultiplier::run_multiply_on_gpu_mat_mul_opt1()
+{
+    // Setup
+    MTL::CommandBuffer *commandBuffer = m_CommandQueue->commandBuffer();
+    assert(commandBuffer != nullptr);
+
+    MTL::ComputeCommandEncoder *computeEncoder = commandBuffer->computeCommandEncoder();
+    assert(computeEncoder != nullptr);
+
+    computeEncoder->setComputePipelineState(m_MatMultiplyFunctionPSO);
+    computeEncoder->setBuffer(m_device_buffer_A_ptr, 0, 0);
+    computeEncoder->setBuffer(m_device_buffer_B_ptr, 0, 1);
+    computeEncoder->setBuffer(m_device_buffer_X_ptr, 0, 2);
+    computeEncoder->setBuffer(m_device_buffer_params_ptr, 0, 3);
+
+    // Note: The kernel thread's 'x' position in the grid corresponds to the column index in the result matrix
+    // and the 'y' position corresponds to the row index.
+    
+    // 8-16 threads per dim per group seem to work well. These do not have to be the same value.
+    const int x_threads_per_group = 8; // 16
+    const int y_threads_per_group = 8; // 16
+    
+    const int y_submat_dim = 4; // don't change!
+    const int num_row_threads = (m_rows_X + y_submat_dim - 1)/y_submat_dim;
+    
+    const int x_submat_dim = 4; // don't change!
+    const int num_cols_threads = (m_cols_X + x_submat_dim - 1)/x_submat_dim;
+    const int x_group_count = (num_cols_threads + x_threads_per_group - 1) / x_threads_per_group;
+    const int y_group_count = (num_row_threads + y_threads_per_group - 1) / y_threads_per_group;
+    
+    MTL::Size thread_group_count = MTL::Size::Make(x_group_count, y_group_count, 1); // should be the size of the grid = (x_threads, y_threads)
+    MTL::Size threadgroupSize = MTL::Size::Make(x_threads_per_group, y_threads_per_group, 1); //
+    computeEncoder->dispatchThreadgroups(thread_group_count, threadgroupSize);
+    computeEncoder->endEncoding();
+
+    // Start the shader!
+    commandBuffer->commit();
+    // Shader is still running here. Put other code here if you like.
+    commandBuffer->waitUntilCompleted();
+}
+
 void MatrixMultiplier::run_on_cpu_accelerate_blas() {
     // Run optimized CPU (AMX) BLAS.
     

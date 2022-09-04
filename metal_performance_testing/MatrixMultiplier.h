@@ -46,6 +46,11 @@ public:
     void run_multiply_on_gpu();
     
     /**
+     * Run shader "mat_mul_opt1".
+     */
+    void run_multiply_on_gpu_mat_mul_opt1();
+    
+    /**
      * Run the multiplication on the CPU (actually AMX units) using
      *  cblas_sgemm() in Apple's Accelerate framework.
      */
