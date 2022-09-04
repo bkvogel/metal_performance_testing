@@ -20,7 +20,7 @@ Since there seemed to be no existing open source matrix multiplication shaders i
 
 ### Description of the included code
 
-This repo includes two matrix multiplication shaders:
+This repo includes the following matrix multiplication shaders:
 - `mat_mul_simple1.metal`: The most basic GPU implementation possible. This is essentially the same code as the inner loop of the CPU version. It simply computes the dot product over the inner dimension for its current thread. We will refer to this as the "naive" GPU implementation. Arbitrary matrix sizes are supported.
 - `mat_mul_optimized_nv.metal`: This version uses shared threadgroup memory with a tiled algorithm. I directly ported it to Metal from the corresponding CUDA kernel in NVIDIA's [cuda-samples](https://github.com/NVIDIA/cuda-samples/blob/master/Samples/0_Introduction/matrixMul/matrixMul.cu). Arbitrary matrix sizes are supported. (note that the original CUDA kernel I linked to did *not* support arbitrary matrix sizes, so I modified it slightly while porting)
 - `mat_mul_opt1`: This is the current fastest shader in this repo. I wrote this to try to improve upon the naive version by giving each thread more work to do. Since each thread does its own tiling (using small 4x4 sub-matrices), it does not use shared threadgroup memory or synchronization barriers. Arbitrary matrix sizes are supported. This also provides an example of using Metal's `float4x4` matrix data type to simplify the shader code. Despite the simplicity, it is capable of over 3 TFLOPS on M1 MAx.  
