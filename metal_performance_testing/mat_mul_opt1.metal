@@ -60,10 +60,9 @@ kernel void mat_mul_opt1(device const float* A,
     // Write out the results.
     for (uint j = 0; j < 4; ++j) { // column offset into X
         for (uint i = 0; i < 4; ++i) { // row offset into X
-            uint index_X = (idy + i)*col_dim_x + idx + j;
             // bounds check
             if ((idx + j < col_dim_x) && (idy + i < row_dim_x)) {
-                X[index_X] = Xsub[j][i];
+                X[(idy + i)*col_dim_x + idx + j] = Xsub[j][i];
             }
         }
     }
