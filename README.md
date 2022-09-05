@@ -53,7 +53,7 @@ It should then build and run. (although I have not tested that it works on anoth
 The following results are for a 2021 Macbook Pro with M1 Max and 64 GB RAM.
 The code was run in release mode with clang optimization flags `-O3 -ffast-math`.
 
-#### Experiment 1: Performance of the naive shader
+#### Experiment 1: Performance of the naive shader: `mat_mul_simple1.metal`
 
 Let's first consider the most basic "naive" matrix multiplication implementation on CPU and GPU and compare it to an optimized CPU sgemm in Apple's Accelerate Framework. It will compute "X = A * B".
 
@@ -73,7 +73,7 @@ Observations:
 
 --------------
 
-#### Experiment 2: Performance of a shader using shared memory and tiling
+#### Experiment 2: Performance of a shader using shared memory and tiling: `mat_mul_optimized_nv.metal`
 
 Now let's see if we can optimize the GPU implementation to improve the performance. I think it is interesting to start with a working CUDA kernel for the following reasons:
 - It can serve as a concrete example of porting a CUDA kernel to Metal. It will be interesting to see how much work is required to do the porting.
@@ -95,7 +95,7 @@ Observations:
 
 --------------
 
-#### Experiment 3: Performance of a shader using thread-independent tiling without shared memory: `mat_mul_opt1.metal`
+#### Experiment 3: Performance of a shader using thread-independent 4x4 tiling without shared memory: `mat_mul_opt1.metal`
 
 Here I used the naive algorithm as a starting point and then modified it so that rather than having each thread compute a single element of the result matrix, it computes a 4x4 sub-matrix of the result matrix instead. This is done by tiling the result and source matrices into 4x4 sub-matrices and having each thread multiply-accumulate the tiled matrices into the corresponding 4x4 result sub-matrix. Since each thread does its own tiling and there is no sharing of data between threads, shared threadgroup memory and synchronization barriers are not needed. The 4x4 multipications are vectorized using Metal's `float4x4` matrix data type, which significantly simplified the code compared to using `float4`. The shader source is in `mat_mul_opt1.metal`. More optimizations are certainly possible, but the peak performance of over 3 TFLOPS seems good considering the simplicity of the code.
 
