@@ -261,7 +261,7 @@ void run_interleaved() {
     //const int cols_X = 8192;
     //const int inner_dim = 8192;
     
-    cout << "Running Experiment 4: Interleaving CPU and GPU computations." << endl;
+    cout << "Running Experiment 5: Interleaving CPU and GPU computations." << endl;
     
     // Get the GPU device.
     MTL::Device *device = MTL::CreateSystemDefaultDevice();
