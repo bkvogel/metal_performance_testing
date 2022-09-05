@@ -55,7 +55,7 @@ kernel void mat_mul_opt2(device const float* A,
     if ((idx < col_dim_x) && (idy < row_dim_x)) {
         uint k = 0;
         while (k < inner_dim) {
-            // Read the values into 4x4 submatrices Asub and Bsub.
+            // Read the values into the 4x4 submatrices.
             for (uint i = 0; i < 4; ++i) { // row offset into X
                 for (uint j = 0; j < 4; ++j) { // column offset into X
                     // corresponds to A[idy + i, k + j]
@@ -74,7 +74,7 @@ kernel void mat_mul_opt2(device const float* A,
                     Asub2[j][i] = A[(idy + i + 4)*inner_dim + k + j];
                 }
             }
-            // Multiply the two 4x4 submatrices and accumulate the result.
+            // Multiply the 4x4 submatrices and accumulate the result.
             Xsub += Asub * Bsub;
             Xsub2 += Asub2 * Bsub;
             k += 4;
