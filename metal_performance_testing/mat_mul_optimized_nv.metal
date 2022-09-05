@@ -9,13 +9,16 @@
 #include "ShaderParams.h"
 using namespace metal;
  
-
-// Compute matrix multiplication result = inA x inB.
-// This is an "optimized" matrix multiplication shader using shared (threadgroup) memory with a
-// tiling algorithm. I ported if from the CUDA kernel at the end of this file.
-// The original CUDA version only supported matricies with dimensions that are an integer
-// multiple of the block size, but I added support to the Metal version for arbitrary sized
-// matrices.
+/**
+ * Compute matrix multiplication result = inA x inB.
+ * This is an optimized matrix multiplication shader using shared threadgroup memory with a
+ * tiling algorithm. It was ported from the CUDA kernel at the end of this file.
+ *
+ * Requirements:
+ * - All matrices are assumed to have row-major ordering.
+ * - All matrix dimensions must be an integer multiple of the block size.
+ *
+ */
 kernel void mat_mul_optimized_nv(device const float* inA,
                                  device const float* inB,
                                  device float* result,
@@ -27,8 +30,7 @@ kernel void mat_mul_optimized_nv(device const float* inA,
     
     // Note: be sure that this is set to the same value as "threads per group" in the calling code!
     const int BLOCK_SIZE = 8;
-    
-    const uint row_dim_x = params.row_dim_x;
+
     const uint wB = params.col_dim_x;
     const uint wA = params.inner_dim;
     
@@ -95,11 +97,8 @@ kernel void mat_mul_optimized_nv(device const float* inA,
         threadgroup_barrier(mem_flags::mem_none);
       }
 
-    if ((id.y < row_dim_x) && (id.x < wB)) {
-        // Only write the result to memory if we are in bounds.
-        const int c = wB * BLOCK_SIZE * by + BLOCK_SIZE * bx;
-        result[c + wB * ty + tx] = Csub;
-    }
+    const int c = wB * BLOCK_SIZE * by + BLOCK_SIZE * bx;
+    result[c + wB * ty + tx] = Csub;    
 }
 
 // For reference, I have copied the original CUDA kernel source code below, which

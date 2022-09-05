@@ -40,17 +40,17 @@ void run_mat_mult_shaders() {
     //const int cols_X = 256;
     //const int inner_dim = 256;
     
-    //const int rows_X = 1230;
-    //const int cols_X = 1156;
-    //const int inner_dim = 789;
-    
     //const int rows_X = 1024;
-    //const int cols_X = 1024;
-    //const int inner_dim = 1024;
+    //const int cols_X = 768;
+    //const int inner_dim = 512;
     
-    const int rows_X = 2048;
-    const int cols_X = 2048;
-    const int inner_dim = 2048;
+    const int rows_X = 1024;
+    const int cols_X = 1024;
+    const int inner_dim = 1024;
+    
+    //const int rows_X = 2048;
+    //const int cols_X = 2048;
+    //const int inner_dim = 2048;
     
     //const int rows_X = 3000;
     //const int cols_X = 4000;
@@ -82,13 +82,14 @@ void run_mat_mult_shaders() {
     // Verify that it computes the correct result
     multiplier.check_results();
     
+    const int loop_count = 200;
+    
     // Benchmark the Metal code
     
     {
         cout << "Running benchmark for Metal shader: " << shader_name << endl;
         using namespace std::chrono;
         auto t0 = high_resolution_clock::now();
-        int loop_count = 200;
         for (int n = 0; n != loop_count; ++n)
         {
             // Perform the multiplication
@@ -114,7 +115,6 @@ void run_mat_mult_shaders() {
         cout << "Running benchmark for Metal shader: " << shader_name_nv_optimized << endl;
         using namespace std::chrono;
         auto t0 = high_resolution_clock::now();
-        int loop_count = 200;
         for (int n = 0; n != loop_count; ++n)
         {
             // Perform the multiplication
@@ -127,7 +127,7 @@ void run_mat_mult_shaders() {
         cout << "\n-------------------------\n" << endl;
     }
     
-    // Switch to the my optimized shader.
+    // Switch to the my optimized shader v1.
     const string shader_name_mat_mul_opt1 = "mat_mul_opt1";
     multiplier.change_shader(shader_name_mat_mul_opt1);
     multiplier.initialize_data();
@@ -140,11 +140,35 @@ void run_mat_mult_shaders() {
         cout << "Running benchmark for Metal shader: " << shader_name_mat_mul_opt1 << endl;
         using namespace std::chrono;
         auto t0 = high_resolution_clock::now();
-        int loop_count = 200;
         for (int n = 0; n != loop_count; ++n)
         {
             // Perform the multiplication
             multiplier.run_multiply_on_gpu_mat_mul_opt1();
+        }
+        auto t1 = high_resolution_clock::now();
+        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
+        double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
+        cout << gflops << " GFLOPS" << endl;
+        cout << "\n-------------------------\n" << endl;
+    }
+    
+    // Switch to the my optimized shader v2.
+    const string shader_name_mat_mul_opt2 = "mat_mul_opt2";
+    multiplier.change_shader(shader_name_mat_mul_opt2);
+    multiplier.initialize_data();
+    // Perform the multiplication
+    multiplier.run_multiply_on_gpu_mat_mul_opt2();
+    // Verify that it computes the correct result
+    multiplier.check_results();
+    
+    {
+        cout << "Running benchmark for Metal shader: " << shader_name_mat_mul_opt2 << endl;
+        using namespace std::chrono;
+        auto t0 = high_resolution_clock::now();
+        for (int n = 0; n != loop_count; ++n)
+        {
+            // Perform the multiplication
+            multiplier.run_multiply_on_gpu_mat_mul_opt2();
         }
         auto t1 = high_resolution_clock::now();
         auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
@@ -175,7 +199,6 @@ void run_mat_mult_shaders() {
         cout << "Running benchmark for Accelerate BLAS sgemm on CPU"<< endl;
         using namespace std::chrono;
         auto t0 = high_resolution_clock::now();
-        int loop_count = 200;
         for (int n = 0; n != loop_count; ++n)
         {
             // Perform the multiplication
@@ -244,14 +267,18 @@ void run_interleaved() {
     MTL::Device *device = MTL::CreateSystemDefaultDevice();
    
     // The name of the shader to run.
-    const string shader_name = "mat_mul_opt1";
+    const string shader_name = "mat_mul_opt2";
     
     MatrixMultiplier multiplier(device, shader_name);
     multiplier.allocate_memory(rows_X, cols_X, inner_dim);
     multiplier.initialize_data();
     
     // Perform the multiplication
-    multiplier.run_multiply_on_gpu_mat_mul_opt1();
+    if (shader_name == "mat_mul_opt1") {
+        multiplier.run_multiply_on_gpu_mat_mul_opt1();
+    } if (shader_name == "mat_mul_opt2") {
+        multiplier.run_multiply_on_gpu_mat_mul_opt2();
+    }
     
     // Verify that it computes the correct result
     multiplier.check_results();
@@ -265,7 +292,11 @@ void run_interleaved() {
         int loop_count = 200;
         for (int n = 0; n != loop_count; ++n)
         {
-            multiplier.run_multiply_on_gpu_mat_mul_opt1();
+            if (shader_name == "mat_mul_opt1") {
+                multiplier.run_multiply_on_gpu_mat_mul_opt1();
+            } if (shader_name == "mat_mul_opt2") {
+                multiplier.run_multiply_on_gpu_mat_mul_opt2();
+            }
         }
         auto t1 = high_resolution_clock::now();
         auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
@@ -287,7 +318,11 @@ void run_interleaved() {
             // Modify a tiny part of the matrix data.
             multiplier.touch_data_cpu();
             // Perform the multiplication
-            multiplier.run_multiply_on_gpu_mat_mul_opt1();
+            if (shader_name == "mat_mul_opt1") {
+                multiplier.run_multiply_on_gpu_mat_mul_opt1();
+            } if (shader_name == "mat_mul_opt2") {
+                multiplier.run_multiply_on_gpu_mat_mul_opt2();
+            }
         }
         auto t1 = high_resolution_clock::now();
         auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
@@ -307,7 +342,11 @@ void run_interleaved() {
             // Modify a tiny part of the matrix data.
             multiplier.relu_cpu();
             // Perform the multiplication
-            multiplier.run_multiply_on_gpu_mat_mul_opt1();
+            if (shader_name == "mat_mul_opt1") {
+                multiplier.run_multiply_on_gpu_mat_mul_opt1();
+            } if (shader_name == "mat_mul_opt2") {
+                multiplier.run_multiply_on_gpu_mat_mul_opt2();
+            }
         }
         auto t1 = high_resolution_clock::now();
         auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();

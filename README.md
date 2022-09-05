@@ -3,7 +3,7 @@
 
 
 
-This repo currently contains example Metal shaders (kernels) for performing matrix multiplication on the GPU. Code is included for measuring the performance of the shaders. The fastest one is currently able to reach somewhere between 1/3 to 1/2 the performance of Apple's optimized GPU `MPSMatrixMultiplication` kernel on an M1 Max. Some preliminary experiments are performed to explore the potential for simplified GPU programming and increased performance due to the physically shared CPU-GPU memory of M1-based Macs.
+This repo currently contains example Metal shaders (kernels) for performing matrix multiplication on the GPU. Code is included for measuring the performance of the shaders. The fastest one is currently able to reach roughly 1/2 the performance of Apple's optimized GPU `MPSMatrixMultiplication` kernel on an M1 Max. Some preliminary experiments are performed to explore the potential for simplified GPU programming and increased performance due to the physically shared CPU-GPU memory of M1-based Macs.
 
 ### Background and motivation
 
@@ -22,8 +22,9 @@ Since there seemed to be no existing open source matrix multiplication shaders i
 
 This repo includes the following matrix multiplication shaders:
 - `mat_mul_simple1.metal`: The most basic GPU implementation possible. This is essentially the same code as the inner loop of the CPU version. It simply computes the dot product over the inner dimension for its current thread. We will refer to this as the "naive" GPU implementation. Arbitrary matrix sizes are supported.
-- `mat_mul_optimized_nv.metal`: This version uses shared threadgroup memory with a tiled algorithm. I directly ported it to Metal from the corresponding CUDA kernel in NVIDIA's [cuda-samples](https://github.com/NVIDIA/cuda-samples/blob/master/Samples/0_Introduction/matrixMul/matrixMul.cu). Arbitrary matrix sizes are supported. (note that the original CUDA kernel I linked to did *not* support arbitrary matrix sizes, so I modified it slightly while porting)
-- `mat_mul_opt1`: This is the current fastest shader in this repo. I wrote this to try to improve upon the naive version by giving each thread more work to do. Since each thread does its own tiling (using small 4x4 sub-matrices), it does not use shared threadgroup memory or synchronization barriers. Arbitrary matrix sizes are supported. This also provides an example of using Metal's `float4x4` matrix data type to simplify the shader code. Despite the simplicity, it is capable of over 3 TFLOPS on M1 MAx.  
+- `mat_mul_optimized_nv.metal`: This version uses shared threadgroup memory with a tiled algorithm. I directly ported it to Metal from the corresponding CUDA kernel in NVIDIA's [cuda-samples](https://github.com/NVIDIA/cuda-samples/blob/master/Samples/0_Introduction/matrixMul/matrixMul.cu).
+- `mat_mul_opt1`: I wrote this to try to improve upon the naive version by giving each thread more work to do. Since each thread does its own tiling (using small 4x4 sub-matrices), it does not use shared threadgroup memory or synchronization barriers. Matrix sizes must be an integer multiple of 4. This also provides an example of using Metal's `float4x4` matrix data type to simplify the shader code. Despite the simplicity, it is capable of over 3 TFLOPS on M1 MAx.
+- `mat_mul_opt2`: This is the current fastest shader in this repo. It doubles the work performed by each thread by computing an 8x4 sub-matrix result of X, using the same method as `mat_mul_opt1`. Its peak performance is around 3.8 TFLOPS on an M1 Max. The matrix dimensions must be an integer multiple of 4 or 8 depending on the dimension.
 
 I also include the `Matrix` tensor (multidimensional array) class and a subset of the tensor `Utilities` from my old Kumozu framework. It contains CPU implementations of matrix multiplication including BLAS and some other simple tensor operations. This is only included because it simplified writing the examples. In your own code, you could replace this with your favorite tensoor library, provided that it is also capable of initilizing a tensor given an externally supplied float pointer.
 
@@ -84,7 +85,6 @@ I am happy to report that it was extremely straightforward to port to Metal. As 
 - Change `__syncthreads();` in CUDA to `threadgroup_barrier(mem_flags::mem_none);` in Metal.
 - Change `__shared__` in CUDA to `threadgroup` in CUDA.
 - In CUDA, you can simply call the kernel with arbitrary parameters. However, in Metal you can only pass in Buffer pointers to (shared) GPU memory which can then be cast to anything you like (as long as it is the correct thing). To pass arbitrary parameters in Metal, the convention seems to be to make a custom struct containing them and supply it to the shader as a Buffer.
-- The CUDA kernel is restricted to matrix sizes that are a multiple of the block size. I added a bounds check to the Metal version to support arbitrary sized matrices.
 
 Now let's look at the performance results. This corresponds to the `shader_name = "mat_mul_optimized_nv"` section in `run_mat_mult_shaders()`. In addition to running the Metal code on the M1 Max, I ran the corresponding CUDA sample on an NVIDIA 1080 Ti, which seems to have roughly similar hardware performance in terms of GPU memory bandwidth and peak FP32 FLOPS. The results are shown in the table further below.
 
@@ -95,66 +95,92 @@ Observations:
 
 --------------
 
-#### Experiment 3: Performance of a shader using thread-independent tiling without shared memory
+#### Experiment 3: Performance of a shader using thread-independent tiling without shared memory: `mat_mul_opt1.metal`
 
-Here I used the naive algorithm as a starting point and then modified it so that rather than having each thread compute a single element of the result matrix, it computes a 4x4 sub-matrix of the result matrix instead. This is done by tiling the result and source matrices into 4x4 sub-matrices and having each thread multiply-accumulate the tiled matrices into the corresponding 4x4 result sub-matrix. Since each thread does its own tiling and there is no sharing of data between threads, shared threadgroup memory and synchronization barriers are not needed. The 4x4 multipications are vectorized using Metal's `float4x4` matrix data type, which significantly simplified the code compared to using `float4`. The shader source is in `mat_mul_opt1.metal`. More optimizations are certainly possible, but considering the performance (over 3 TFLOPS, see below) and the simplicity of the code, the tradeoff between the two seem good to me.
-
-Performance results: (threadgroup size is 8x8 unless otherwise specified)
-
-| Implementation | Input matrix A size | Input matrix B size | GFLOPS |
-|----------------|--------|--------|--------|
-| Naive CPU | 256x256 | 256x256 |2.17 |
-| `mat_mul_simple1` | 256x256 | 256x256 | 76.4 |
-| `mat_mul_optimized_nv` | 256x256 | 256x256 |114.6 |
-| CUDA 1080Ti | 256x256 | 256x256 |1034.1 |
-| Accelerate sgemm | 256x256 | 256x256 | 1097.9 |
-| `mat_mul_opt1` | 256x256 | 256x256 | 121.6 |
-| | | | |
-| Naive CPU | 1230x789 | 789x1156 | 1.74 |
-| `mat_mul_simple1` | 1230x789 | 789x1156 | 583.8 |
-| `mat_mul_optimized_nv` | 1230x789 | 789x1156 | 889.3 |
-| Accelerate sgemm | 1230x789 | 789x1156 | 1484.8 |
-| `mat_mul_opt1` | 1230x789 | 789x1156 | 1911.6 |
-| | | | |
-| Naive CPU | 1024x1024 | 1024x1024 | 1.70 |
-| `mat_mul_simple1` | 1024x1024 | 1024x1024 | 578.3 |
-| `mat_mul_optimized_nv` | 1024x1024 | 1024x1024 | 1227.3 |
-| CUDA 1080Ti | 1024x1024 | 1024x1024 | 1877.4 |
-| Accelerate sgemm | 1024x1024 | 1024x1024 | 1724.8 |
-| `mat_mul_opt1` | 1024x1024 | 1024x1024 | 2318.2 |
-| | | | |
-| Naive CPU | 2048x2048 | 2048x2048 | 0.74 |
-| `mat_mul_simple1` | 2048x2048 | 2048x2048 | 652.5 |
-| `mat_mul_optimized_nv` | 2048x2048 | 2048x2048 | 1390.4 |
-| `mat_mul_optimized_nv` | 2048x2048 | 2048x2048 | 947.0 (using 32x32 threadgroup size) |
-| CUDA 1080Ti | 2048x2048 | 2048x2048 | 1849.5 |
-| Accelerate sgemm | 2048x2048 | 2048x2048 | 1883.4 |
-| `mat_mul_opt1` | 2048x2048 | 2048x2048 | 3155.2 |
-| | | | |
-| Naive CPU | 3000x5000 | 5000x4000 | 0.73 |
-| `mat_mul_simple1` | 3000x5000 | 5000x4000 | 553.8 |
-| `mat_mul_optimized_nv` | 3000x5000 | 5000x4000 | 530.9 |
-| Accelerate sgemm | 3000x5000 | 5000x4000 | 2011.5 |
-| `mat_mul_opt1` | 3000x5000 | 5000x4000 | 2899.5 |
-| | | | |
-| `mat_mul_simple1` | 20000x20000 | 20000x20000 | 555.8 |
-| `mat_mul_optimized_nv` | 20000x20000 | 20000x20000 | 848.7  (using 32x32 threadgroup size) |
-| `mat_mul_optimized_nv` | 20000x20000 | 20000x20000 | 122.0 |
-| Accelerate sgemm | 20000x20000 | 20000x20000 | 2090.8 |
-| `mat_mul_opt1` | 20000x20000 | 20000x20000 | 1482.8 |
+Here I used the naive algorithm as a starting point and then modified it so that rather than having each thread compute a single element of the result matrix, it computes a 4x4 sub-matrix of the result matrix instead. This is done by tiling the result and source matrices into 4x4 sub-matrices and having each thread multiply-accumulate the tiled matrices into the corresponding 4x4 result sub-matrix. Since each thread does its own tiling and there is no sharing of data between threads, shared threadgroup memory and synchronization barriers are not needed. The 4x4 multipications are vectorized using Metal's `float4x4` matrix data type, which significantly simplified the code compared to using `float4`. The shader source is in `mat_mul_opt1.metal`. More optimizations are certainly possible, but the peak performance of over 3 TFLOPS seems good considering the simplicity of the code.
 
 Observations:
-- The best performance of the included shaders: over 3 TFLOPS on sufficiently large matrices. The performance is higher than the Accelerate BLAS sgemm (but not for extremely small or large matrices) and is still significantly less than Apple's GPU optimized kernel.
-- 8x8 threadgroup sizes seems to work best.
+- Over 3 TFLOPS on sufficiently large matrices. The performance is better than the Accelerate BLAS sgemm for large enough matrix sizes, but still significantly slower than Apple's GPU optimized kernel.
+- 8x8 threadgroup size seems to work best.
+
+Notes:
+- The matrix dimensions must be an integer multiple of 4.
 
 --------------
 
-#### Experiment 4: Interleaving CPU and GPU computations
+#### Experiment 4: Performance of a shader using thread-independent 8x4 tiling without shared memory: `mat_mul_opt2.metal`
+
+I used `mat_mul_opt1.metal` and tried increasing the amount of work performed by each thread from the previous 4x4 sub-matrix to an 8x4 sub-matrix of the result matrix. In the implementaiton, each thread now computes the results for two 4x4 sub-matrices of X, which are vertically stacked (along the row index).
+
+Observations:
+- Peak performance is now 3.7 TFLOPS on large enough matrix sizes.
+- 16x8 threadgroup size seems to work best.
+
+Notes:
+- Since a 8x4 tiling of X is used, the row dimension of X and A must be an integer multiple of 8. The other dimensions must be an integer multiple of 4.
+
+---------------
+
+Performance results for all benchmarks: (threadgroup size is 8x8 unless otherwise specified)
+
+| Implementation | Input matrix A size | Input matrix B size | GFLOPS | Notes
+|----------------|--------|--------|--------|---|
+| Naive CPU | 256x256 | 256x256 |2.17 | |
+| `mat_mul_simple1` | 256x256 | 256x256 | 76.4 | |
+| `mat_mul_optimized_nv` | 256x256 | 256x256 |114 | |
+| CUDA 1080Ti | 256x256 | 256x256 |1034 | |
+| Accelerate sgemm | 256x256 | 256x256 | 1098 | |
+| `mat_mul_opt1` | 256x256 | 256x256 | 122 | |
+| `mat_mul_opt2` | 256x256 | 256x256 | 114 | 16x8 threadgroup |
+| | | | | |
+| Naive CPU | 1024x768 | 768x512 | 1.83 | |
+| `mat_mul_simple1` | 1024x768 | 768x512 | 443 | |
+| `mat_mul_optimized_nv` | 1024x768 | 768x512 | 964 | |
+| Accelerate sgemm | 1024x768 | 768x512 | 1321 | |
+| `mat_mul_opt1` | 1024x768 | 768x512 | 1299 | |
+| `mat_mul_opt2` | 1024x768 | 768x512 | 1067 | 16x8 threadgroup |
+| | | | | |
+| Naive CPU | 1024x1024 | 1024x1024 | 1.70 | |
+| `mat_mul_simple1` | 1024x1024 | 1024x1024 | 578 | |
+| `mat_mul_optimized_nv` | 1024x1024 | 1024x1024 | 1227 | |
+| CUDA 1080Ti | 1024x1024 | 1024x1024 | 1877 | |
+| Accelerate sgemm | 1024x1024 | 1024x1024 | 1725 | |
+| `mat_mul_opt1` | 1024x1024 | 1024x1024 | 2318 | |
+| `mat_mul_opt2` | 1024x1024 | 1024x1024 | 2587 | 16x8 threadgroup |
+| | | | | |
+| Naive CPU | 2048x2048 | 2048x2048 | 0.74 | |
+| `mat_mul_simple1` | 2048x2048 | 2048x2048 | 653 | |
+| `mat_mul_optimized_nv` | 2048x2048 | 2048x2048 | 1390 | |
+| `mat_mul_optimized_nv` | 2048x2048 | 2048x2048 | 947 | 32x32 threadgroup |
+| CUDA 1080Ti | 2048x2048 | 2048x2048 | 1850 | |
+| Accelerate sgemm | 2048x2048 | 2048x2048 | 1883 | |
+| `mat_mul_opt1` | 2048x2048 | 2048x2048 | 3155 | |
+| `mat_mul_opt2` | 2048x2048 | 2048x2048 | 3658 | 16x8 threadgroup |
+| | | | | |
+| Naive CPU | 3000x5000 | 5000x4000 | 0.73 | |
+| `mat_mul_simple1` | 3000x5000 | 5000x4000 | 559 | |
+| `mat_mul_optimized_nv` | 3000x5000 | 5000x4000 | 536 | |
+| Accelerate sgemm | 3000x5000 | 5000x4000 | 2032 | |
+| `mat_mul_opt1` | 3000x5000 | 5000x4000 | 3056 | |
+| `mat_mul_opt2` | 3000x5000 | 5000x4000 | 3766 | 16x8 threadgroup |
+| | | | | |
+| `mat_mul_simple1` | 20000x20000 | 20000x20000 | 556 | |
+| `mat_mul_optimized_nv` | 20000x20000 | 20000x20000 | 849  | 32x32 threadgroup |
+| `mat_mul_optimized_nv` | 20000x20000 | 20000x20000 | 122 | |
+| Accelerate sgemm | 20000x20000 | 20000x20000 | 2091 | |
+| `mat_mul_opt1` | 20000x20000 | 20000x20000 | 1483 | |
+| `mat_mul_opt2` | 20000x20000 | 20000x20000 | 2957 | 16x8 threadgroup |
+
+
+
+--------------
+
+#### Experiment 5: Interleaving CPU and GPU computations
 
 Since the M1-based SOCs contain shared CPU-GPU memory, we should expect that there will be no performance penalty when the CPU and GPU take turns operating on the same data arrays. This is because unlike traditional discrete GPUs which have physically separate memory from the CPU, there is no longer a need to maintain separate CPU and GPU arrays and copy data between them. Let's test this out by running the GPU matrix multiplicaiton operation inside a loop in which the GPU and CPU code take turns reading and/or writing to the same arrays (matrices) each iteration. In a traditional GPU, this would require to copy the matrix values to/from the CPU and GPU each iteration, potentially slowing things down. If there is actually no copying of data between the CPU and GPU on the M1 Max, we would expect that time required to perform these interleaved operations should approximately be equal to the time that it takes to perform only the CPU subset of the operations plus the time to perform only the GPU subset of the operations. Let's do just this and measure the timings.
 
 
-The function `run_interleaved()` contains the code to run the experiments in this section. It uses my `mat_mul_opt1` matrix multiplication shader for the GPU operations in these experiments. The CPU operations are described below.
+The function `run_interleaved()` contains the code to run the experiments in this section. It uses my `mat_mul_opt2` matrix multiplication shader for the GPU operations in these experiments. The CPU operations are described below.
 
 Let's use the following arbitrary matrix sizes:
 A: 1000x900
@@ -168,7 +194,7 @@ Here are the timings:
 
 | GPU Multiply only | CPU ReLu only | Both interleaved |
 |---|--|---|
-| 211 millisec | 159 millisec | 370 millisec |
+| 192 millisec | 156 millisec | 353 millisec |
 
 As expected, the sum of the column 1 (GPU operation only) + column 2 (CPU operation only) is approximately column 3 (interleaving both operations). At least for this example, it shows that there is no measurable overhead in interleaving operations on the CPU and GPU that need to access the same data in memory.
 
@@ -180,7 +206,7 @@ This was just a preliminary test, but so far the Apple Silicon Macs are looking 
 ### Misc. Notes
 
 - If you want to create an array to share between the CPU and GPU, it seems that it needs to be created by calling `newBuffer(buffer_size_in_bytes, MTL::ResourceStorageModeShared)` on the GPU's device pointer. This will allocate the storage and create a GPU pointer to the array (referred to as "buffer" in the code). You can then get the CPU pointer to the same array by calling `contents()` on it. That is, you first need to allocate the storage on the GPU side and then get a CPU pointer to it. There is apparantly only a single copy of the array in the shared physical memory and we now have two different types of pointers to it. Either the CPU or GPU should then be able to access and/or write data using their respective pointers at any time. Since the memory is physically shared, these reads and writes should not trigger any copying of the array between CPU and GPU (because there should be only a single copy in the shared memory).
-- If anyone is aware of a faster optimized open source shader than the optimized one in this repo, I would be interested to know about it. Since Apple's `MPSMatrixMultiplication` kernel runs significantly faster (I see around 7 TFLOPS peak performance when calling it from Swift code versus at most 3.3 TFLOPS with my shader), I would think it should certainly be possible, assuming they used the public API to implement their proprietary kernel. If anyone even knows how to call `MPSMatrixMultiplication` from C++ code, I would also be interested to know.
+- If anyone is aware of a faster optimized open source shader than the optimized one in this repo, I would be interested to know about it. Since Apple's `MPSMatrixMultiplication` kernel runs significantly faster (I see around 7 TFLOPS peak performance when calling it from Swift code), I would think it should certainly be possible, assuming they used the public API to implement their proprietary kernel. If anyone even knows how to call `MPSMatrixMultiplication` from C++ code, I would also be interested to know.
 
 
 ### License

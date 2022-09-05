@@ -25,10 +25,11 @@ using namespace metal;
  *
  * Requirements:
  * - The supplied matrices must be in row-major order.
- * - Each matrix dimension must be an integer multiple of 4.
+ * - The row dimension of X and A must an integer multiple of 8. The other dimensions of X, A, and
+ *  B must be a integer mutiple of 4.
  *
  */
-kernel void mat_mul_opt1(device const float* A,
+kernel void mat_mul_opt2(device const float* A,
                             device const float* B,
                             device float* X,
                             constant MatMulParams& params,
@@ -39,34 +40,47 @@ kernel void mat_mul_opt1(device const float* A,
     const uint col_dim_x = params.col_dim_x;
     const uint inner_dim = params.inner_dim;
     const uint idx = id.x*4; // column index of the corner in X.
-    const uint idy = id.y*4; // row index of the corner in X.
+    const uint idy = id.y*8; // row index of the corner in X.
     // Note: float4x4 uses column major: Asub[m][n] is row n of column m.
     float4x4 Asub(0.0f);
     float4x4 Bsub(0.0f);
     float4x4 Xsub(0.0f);
+    float4x4 Asub2(0.0f);
+    float4x4 Xsub2(0.0f);
     // bounds check can potentially be removed but does not seem to affect performance
     if ((idx < col_dim_x) && (idy < row_dim_x)) {
         uint k = 0;
         while (k < inner_dim) {
             // Read the values into 4x4 submatrices Asub and Bsub.
-            for (uint j = 0; j < 4; ++j) { // column offset into X
-                for (uint i = 0; i < 4; ++i) { // row offset into X
+            for (uint i = 0; i < 4; ++i) { // row offset into X
+                for (uint j = 0; j < 4; ++j) { // column offset into X
                     // corresponds to A[idy + i, k + j]
                     Asub[j][i] = A[(idy + i)*inner_dim + k + j];
+                }
+            }
+            for (uint i = 0; i < 4; ++i) { // row offset into X
+                for (uint j = 0; j < 4; ++j) { // column offset into X
                     // corresponds to B[k + i, idx + j]
                     Bsub[j][i] = B[(k + i)*col_dim_x + idx + j];
                 }
             }
+            for (uint i = 0; i < 4; ++i) { // row offset into X
+                for (uint j = 0; j < 4; ++j) { // column offset into X
+                    // corresponds to A[idy + i + 4, k + j]
+                    Asub2[j][i] = A[(idy + i + 4)*inner_dim + k + j];
+                }
+            }
             // Multiply the two 4x4 submatrices and accumulate the result.
             Xsub += Asub * Bsub;
+            Xsub2 += Asub2 * Bsub;
             k += 4;
         }
         // Write out the results.
-        for (uint j = 0; j < 4; ++j) { // column offset into X
-            for (uint i = 0; i < 4; ++i) { // row offset into X
+        for (uint i = 0; i < 4; ++i) { // row offset into X
+            for (uint j = 0; j < 4; ++j) { // column offset into X
                 X[(idy + i)*col_dim_x + idx + j] = Xsub[j][i];
+                X[(idy + i + 4)*col_dim_x + idx + j] = Xsub2[j][i];
             }
         }
     }
 }
-
