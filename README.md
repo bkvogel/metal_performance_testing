@@ -113,7 +113,7 @@ Notes:
 I used `mat_mul_opt1.metal` and tried increasing the amount of work performed by each thread from the previous 4x4 sub-matrix to an 8x4 sub-matrix of the result matrix. In the implementaiton, each thread now computes the results for two 4x4 sub-matrices of X, which are vertically stacked (along the row index).
 
 Observations:
-- Peak performance is now 3.7 TFLOPS on large enough matrix sizes.
+- Peak performance is now 3.8 TFLOPS on large enough matrix sizes (e.g., 4096x4096).
 - 16x8 threadgroup size seems to work best.
 
 Notes:
