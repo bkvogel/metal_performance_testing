@@ -14,12 +14,16 @@ using namespace metal;
  * Matrix multiplication example: X = A * B
  *
  * Implementaiton notes:
- * This uses thread-independent tiling with 4x4 tile matrix size.
- * The grid is set up so that the total number of threads along the row and column
- * dimension is 1/4 the size of the corresponding dimension in the result matrix X.
- * Each thread position in the grid then corresponds to a corner of a 4x4 submatrix in X.
- * Each thread will then be responsible for computing the result values in X for its 4x4
- * submatrix. This is done by tiling A and B into 4x4 submatrices and accumulating
+ * Each thread computes the result for an 8x4 sub-matrix of X using two 4x4 sub-matrices
+ * which are vertically stacked in X and in A and a single corresponding 4x4 sub-matrix
+ * in B.
+ * This uses thread-independent tiling with 4x4 tile matrix size, but
+ * The grid is set up so that there will be `row-dim_x/8` threads along the row dimension of
+ * X and `col_dim_x/4` threads along the column dimension.
+ *
+ * Each thread position in the grid then corresponds to a corner of an 8x4 submatrix in X.
+ * Each thread will be responsible for computing the result values in X for its two stacked 4x4
+ * submatrices. This is done by tiling A and B into 4x4 submatrices and accumulating
  * the partial products. Note that we do this without using shared threadgroup memory
  * or synchronization barriers.
  *
