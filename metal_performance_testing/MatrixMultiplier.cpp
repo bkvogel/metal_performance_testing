@@ -317,7 +317,7 @@ void MatrixMultiplier::run_on_cpu_naive_single_thread() {
     // Create empty matrix.
     Matrix<float> X_true;
     
-    // Compute the matrix product using BLAS sgemm.
+    // Compute the matrix product using naive CPU.
     // X_true <- A x B
     mat_multiply_naive(X_true, A, B);
 }
