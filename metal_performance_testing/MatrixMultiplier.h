@@ -81,8 +81,7 @@ private:
     MTL::Buffer *m_device_buffer_B_ptr;
     // Device pointer to contents of matrix B.
     MTL::Buffer *m_device_buffer_X_ptr;
-    // Device pointer to struct containing the shader parameters.
-    MTL::Buffer *m_device_buffer_params_ptr;
+    
     
     int m_rows_X;
     int m_cols_X;

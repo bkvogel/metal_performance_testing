@@ -1,5 +1,5 @@
 //
-//  mat_mul_opt1.metal
+//  mat_mul_opt2.metal
 //  metal_performance_testing
 //
 //  Created by Brian Vogel on 2022/09/04.
