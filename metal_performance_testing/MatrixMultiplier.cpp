@@ -69,6 +69,14 @@ void MatrixMultiplier::allocate_memory(int rows_X, int cols_X, int inner_dim) {
     m_device_buffer_A_ptr = m_device_ptr->newBuffer(m_rows_X * m_cols_A * sizeof(float), MTL::ResourceStorageModeShared);
     m_device_buffer_B_ptr = m_device_ptr->newBuffer(m_cols_A * m_cols_X * sizeof(float), MTL::ResourceStorageModeShared);
     m_device_buffer_X_ptr = m_device_ptr->newBuffer(m_rows_X * m_cols_X * sizeof(float), MTL::ResourceStorageModeShared);
+    
+    // This is how we pass parameter values into our custom shader.
+    // Steps to pass parameters (other than the data buffers) to a kernel:
+    // - Decide which parameters the custom shader needs and make a struct to contain them.
+    // - You can also define the struct in a header file and include it here and in the .metal files to avoid code duplication
+    // - Allocate enough device buffer storage to contain the struct and reuse it.
+    // Create a device buffer with enough storage for our MatMulParams struct.
+    m_device_buffer_params_ptr = m_device_ptr->newBuffer(sizeof(MatMulParams), MTL::ResourceStorageModeShared);
 }
 
 void MatrixMultiplier::initialize_data()
@@ -117,18 +125,7 @@ void MatrixMultiplier::relu_cpu() {
 
 void MatrixMultiplier::run_multiply_on_gpu()
 {
-    // Create a device buffer with enough storage for our MatMulParams struct and set its values.
-    // This is how we pass parameter values into our custom shader.
-    // Steps to pass parameters (other than the data buffers) to a kernel:
-    // - Decide which parameters the custom shader needs and make a struct to contain them.
-    // - Define the same "parameters" struct in two places: in the cpp file (this file) and in the shader file (.metal file).
-    // - Double check to make sure these two structs are identical.
-    // - Create a device buffer with enough storage for the struct (see below).
-    // - Set the parameter values of the struct with the values you want to send to the shader (see below).
-    // - You can also define the struct in a header file and include it in the other files to avoid code duplication
-    // and reduce the potential for mistakes.
-    MTL::Buffer* device_buffer_params_ptr = m_device_ptr->newBuffer(sizeof(MatMulParams), MTL::ResourceStorageModeShared);
-    MatMulParams *params = (MatMulParams *)device_buffer_params_ptr->contents();
+    MatMulParams *params = (MatMulParams *)m_device_buffer_params_ptr->contents();
     params->row_dim_x = m_rows_X;
     params->col_dim_x = m_cols_X;
     params->inner_dim = m_cols_A;
@@ -143,7 +140,7 @@ void MatrixMultiplier::run_multiply_on_gpu()
     computeEncoder->setBuffer(m_device_buffer_A_ptr, 0, 0);
     computeEncoder->setBuffer(m_device_buffer_B_ptr, 0, 1);
     computeEncoder->setBuffer(m_device_buffer_X_ptr, 0, 2);
-    computeEncoder->setBuffer(device_buffer_params_ptr, 0, 3);
+    computeEncoder->setBuffer(m_device_buffer_params_ptr, 0, 3);
 
     // Note: The kernel thread's 'x' position in the grid corresponds to the column index in the result matrix
     // and the 'y' position corresponds to the row index. Note that the matrix is in row-major so that the
@@ -167,23 +164,11 @@ void MatrixMultiplier::run_multiply_on_gpu()
     commandBuffer->commit();
     // Shader is still running here. Put other code here if you like.
     commandBuffer->waitUntilCompleted();
-    device_buffer_params_ptr->release();
 }
 
 void MatrixMultiplier::run_multiply_on_gpu_mat_mul_opt1()
 {
-    // Create a device buffer with enough storage for our MatMulParams struct and set its values.
-    // This is how we pass parameter values into our custom shader.
-    // Steps to pass parameters (other than the data buffers) to a kernel:
-    // - Decide which parameters the custom shader needs and make a struct to contain them.
-    // - Define the same "parameters" struct in two places: in the cpp file (this file) and in the shader file (.metal file).
-    // - Double check to make sure these two structs are identical.
-    // - Create a device buffer with enough storage for the struct (see below).
-    // - Set the parameter values of the struct with the values you want to send to the shader (see below).
-    // - You can also define the struct in a header file and include it in the other files to avoid code duplication
-    // and reduce the potential for mistakes.
-    MTL::Buffer* device_buffer_params_ptr = m_device_ptr->newBuffer(sizeof(MatMulParams), MTL::ResourceStorageModeShared);
-    MatMulParams *params = (MatMulParams *)device_buffer_params_ptr->contents();
+    MatMulParams *params = (MatMulParams *)m_device_buffer_params_ptr->contents();
     params->row_dim_x = m_rows_X;
     params->col_dim_x = m_cols_X;
     params->inner_dim = m_cols_A;
@@ -198,7 +183,7 @@ void MatrixMultiplier::run_multiply_on_gpu_mat_mul_opt1()
     computeEncoder->setBuffer(m_device_buffer_A_ptr, 0, 0);
     computeEncoder->setBuffer(m_device_buffer_B_ptr, 0, 1);
     computeEncoder->setBuffer(m_device_buffer_X_ptr, 0, 2);
-    computeEncoder->setBuffer(device_buffer_params_ptr, 0, 3);
+    computeEncoder->setBuffer(m_device_buffer_params_ptr, 0, 3);
 
     // Note: The kernel thread's 'x' position in the grid corresponds to the column index in the result matrix
     // and the 'y' position corresponds to the row index.
@@ -224,24 +209,12 @@ void MatrixMultiplier::run_multiply_on_gpu_mat_mul_opt1()
     commandBuffer->commit();
     // Shader is still running here. Put other code here if you like.
     commandBuffer->waitUntilCompleted();
-    device_buffer_params_ptr->release();
 }
 
 void MatrixMultiplier::run_multiply_on_gpu_mat_mul_opt2()
 {
-    // Create a device buffer with enough storage for our MatMulParams struct and set its values.
-    // This is how we pass parameter values into our custom shader.
-    // Steps to pass parameters (other than the data buffers) to a kernel:
-    // - Decide which parameters the custom shader needs and make a struct to contain them.
-    // - Define the same "parameters" struct in two places: in the cpp file (this file) and in the shader file (.metal file).
-    // - Double check to make sure these two structs are identical.
-    // - Create a device buffer with enough storage for the struct (see below).
-    // - Set the parameter values of the struct with the values you want to send to the shader (see below).
-    // - You can also define the struct in a header file and include it in the other files to avoid code duplication
-    // and reduce the potential for mistakes.
-    // Device pointer to struct containing the shader parameters.
-    MTL::Buffer* device_buffer_params_ptr = m_device_ptr->newBuffer(sizeof(MatMulParams), MTL::ResourceStorageModeShared);
-    MatMulParams *params = (MatMulParams *)device_buffer_params_ptr->contents();
+    // Set the parameter values of the struct with the values you want to send to the shader (see below).
+    MatMulParams *params = (MatMulParams *)m_device_buffer_params_ptr->contents();
     params->row_dim_x = m_rows_X;
     params->col_dim_x = m_cols_X;
     params->inner_dim = m_cols_A;
@@ -256,7 +229,7 @@ void MatrixMultiplier::run_multiply_on_gpu_mat_mul_opt2()
     computeEncoder->setBuffer(m_device_buffer_A_ptr, 0, 0);
     computeEncoder->setBuffer(m_device_buffer_B_ptr, 0, 1);
     computeEncoder->setBuffer(m_device_buffer_X_ptr, 0, 2);
-    computeEncoder->setBuffer(device_buffer_params_ptr, 0, 3);
+    computeEncoder->setBuffer(m_device_buffer_params_ptr, 0, 3);
 
     // Note: The kernel thread's 'x' position in the grid corresponds to the column index in the result matrix
     // and the 'y' position corresponds to the row index. Note that the matrix is in row-major so that the
@@ -283,7 +256,6 @@ void MatrixMultiplier::run_multiply_on_gpu_mat_mul_opt2()
     commandBuffer->commit();
     // Shader is still running here. Put other code here if you like.
     commandBuffer->waitUntilCompleted();
-    device_buffer_params_ptr->release();
 }
 
 void MatrixMultiplier::run_on_cpu_accelerate_blas() {
