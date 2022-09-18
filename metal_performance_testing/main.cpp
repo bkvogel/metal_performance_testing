@@ -15,10 +15,15 @@
 #include <iostream>
 #include <chrono>
 
+#include "Utilities.h"
 #include "MatrixMultiplier.h"
 
 using namespace std;
 
+
+float matmul_time_to_gflops(float rows, float cols, float inner_dim, float microsecs) {
+    return 2e-3  * static_cast<float>(rows) * static_cast<float>(cols) * static_cast<float>(inner_dim) / static_cast<float>(microsecs);
+}
 
 void run_mat_mult_shaders() {
     // Perform matrix multiplication using custom shaders:
@@ -68,7 +73,7 @@ void run_mat_mult_shaders() {
     
     // Get the GPU device.
     MTL::Device *device = MTL::CreateSystemDefaultDevice();
-   
+    
     // The name of the shader to run.
     const string shader_name = "mat_mul_simple1";
     
@@ -84,23 +89,16 @@ void run_mat_mult_shaders() {
     
     const int loop_count = 200;
     
+    float microsec_per_call;
     // Benchmark the Metal code
     
-    {
-        cout << "Running benchmark for Metal shader: " << shader_name << endl;
-        using namespace std::chrono;
-        auto t0 = high_resolution_clock::now();
-        for (int n = 0; n != loop_count; ++n)
-        {
-            // Perform the multiplication
-            multiplier.run_multiply_on_gpu();
-        }
-        auto t1 = high_resolution_clock::now();
-        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
-        double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
-        cout << gflops << " GFLOPS" << endl;
-        cout << "\n-------------------------\n" << endl;
-    }
+    cout << "Running benchmark for Metal shader: " << shader_name << endl;
+    microsec_per_call = benchmark(loop_count, [&] () {
+        // Perform the multiplication
+        multiplier.run_multiply_on_gpu();
+    });
+    cout << matmul_time_to_gflops(rows_X, cols_X, inner_dim, microsec_per_call) << " GFLOPS" << endl;
+    cout << "\n-------------------------\n" << endl;
     
     // Switch to the NVIDIA example optimized shader.
     const string shader_name_nv_optimized = "mat_mul_optimized_nv";
@@ -111,21 +109,13 @@ void run_mat_mult_shaders() {
     // Verify that it computes the correct result
     multiplier.check_results();
     
-    {
-        cout << "Running benchmark for Metal shader: " << shader_name_nv_optimized << endl;
-        using namespace std::chrono;
-        auto t0 = high_resolution_clock::now();
-        for (int n = 0; n != loop_count; ++n)
-        {
-            // Perform the multiplication
-            multiplier.run_multiply_on_gpu();
-        }
-        auto t1 = high_resolution_clock::now();
-        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
-        double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
-        cout << gflops << " GFLOPS" << endl;
-        cout << "\n-------------------------\n" << endl;
-    }
+    cout << "Running benchmark for Metal shader: " << shader_name_nv_optimized << endl;
+    microsec_per_call = benchmark(loop_count, [&] () {
+        // Perform the multiplication
+        multiplier.run_multiply_on_gpu();
+    });
+    cout << matmul_time_to_gflops(rows_X, cols_X, inner_dim, microsec_per_call) << " GFLOPS" << endl;
+    cout << "\n-------------------------\n" << endl;
     
     // Switch to the my optimized shader v1.
     const string shader_name_mat_mul_opt1 = "mat_mul_opt1";
@@ -136,21 +126,13 @@ void run_mat_mult_shaders() {
     // Verify that it computes the correct result
     multiplier.check_results();
     
-    {
-        cout << "Running benchmark for Metal shader: " << shader_name_mat_mul_opt1 << endl;
-        using namespace std::chrono;
-        auto t0 = high_resolution_clock::now();
-        for (int n = 0; n != loop_count; ++n)
-        {
-            // Perform the multiplication
-            multiplier.run_multiply_on_gpu_mat_mul_opt1();
-        }
-        auto t1 = high_resolution_clock::now();
-        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
-        double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
-        cout << gflops << " GFLOPS" << endl;
-        cout << "\n-------------------------\n" << endl;
-    }
+    cout << "Running benchmark for Metal shader: " << shader_name_mat_mul_opt1 << endl;
+    microsec_per_call = benchmark(loop_count, [&] () {
+        // Perform the multiplication
+        multiplier.run_multiply_on_gpu_mat_mul_opt1();
+    });
+    cout << matmul_time_to_gflops(rows_X, cols_X, inner_dim, microsec_per_call) << " GFLOPS" << endl;
+    cout << "\n-------------------------\n" << endl;
     
     // Switch to the my optimized shader v2.
     const string shader_name_mat_mul_opt2 = "mat_mul_opt2";
@@ -161,54 +143,32 @@ void run_mat_mult_shaders() {
     // Verify that it computes the correct result
     multiplier.check_results();
     
-    {
-        cout << "Running benchmark for Metal shader: " << shader_name_mat_mul_opt2 << endl;
-        using namespace std::chrono;
-        auto t0 = high_resolution_clock::now();
-        for (int n = 0; n != loop_count; ++n)
-        {
-            // Perform the multiplication
-            multiplier.run_multiply_on_gpu_mat_mul_opt2();
-        }
-        auto t1 = high_resolution_clock::now();
-        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
-        double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
-        cout << gflops << " GFLOPS" << endl;
-        cout << "\n-------------------------\n" << endl;
-    }
+    cout << "Running benchmark for Metal shader: " << shader_name_mat_mul_opt2 << endl;
+    microsec_per_call = benchmark(loop_count, [&] () {
+        // Perform the multiplication
+        multiplier.run_multiply_on_gpu_mat_mul_opt2();
+    });
+    cout << matmul_time_to_gflops(rows_X, cols_X, inner_dim, microsec_per_call) << " GFLOPS" << endl;
+    cout << "\n-------------------------\n" << endl;
     
     const int naive_loop_count = 0; // Set to 0 for large matrix sizes because slow.
     if (naive_loop_count > 0) {
         cout << "Running benchmark for naive CPU"<< endl;
-        using namespace std::chrono;
-        auto t0 = high_resolution_clock::now();
-        for (int n = 0; n != naive_loop_count; ++n)
-        {
+        microsec_per_call = benchmark(loop_count, [&] () {
             // Perform the multiplication
             multiplier.run_on_cpu_naive_single_thread();
-        }
-        auto t1 = high_resolution_clock::now();
-        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
-        double gflops = 2e-3 * static_cast<double>(naive_loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
-        cout << gflops << " GFLOPS" << endl;
+        });
+        cout << matmul_time_to_gflops(rows_X, cols_X, inner_dim, microsec_per_call) << " GFLOPS" << endl;
         cout << "\n-------------------------\n" << endl;
     }
     
-    
-    {
-        cout << "Running benchmark for Accelerate BLAS sgemm on CPU"<< endl;
-        using namespace std::chrono;
-        auto t0 = high_resolution_clock::now();
-        for (int n = 0; n != loop_count; ++n)
-        {
-            // Perform the multiplication
-            multiplier.run_on_cpu_accelerate_blas();
-        }
-        auto t1 = high_resolution_clock::now();
-        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
-        double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
-        cout << gflops << " GFLOPS" << endl;
-    }
+    cout << "Running benchmark for Accelerate BLAS sgemm on CPU"<< endl;
+    microsec_per_call = benchmark(loop_count, [&] () {
+        // Perform the multiplication
+        multiplier.run_on_cpu_accelerate_blas();
+    });
+    cout << matmul_time_to_gflops(rows_X, cols_X, inner_dim, microsec_per_call) << " GFLOPS" << endl;
+    cout << "\n-------------------------\n" << endl;
 }
 
 void run_interleaved() {
@@ -265,7 +225,7 @@ void run_interleaved() {
     
     // Get the GPU device.
     MTL::Device *device = MTL::CreateSystemDefaultDevice();
-   
+    
     // The name of the shader to run.
     const string shader_name = "mat_mul_opt2";
     
@@ -284,97 +244,55 @@ void run_interleaved() {
     multiplier.check_results();
     
     // Benchmark the Metal code
-    
-    {
-        cout << "Running multiplication only for Metal shader: " << shader_name << endl;
-        using namespace std::chrono;
-        auto t0 = high_resolution_clock::now();
-        int loop_count = 200;
-        for (int n = 0; n != loop_count; ++n)
-        {
-            if (shader_name == "mat_mul_opt1") {
-                multiplier.run_multiply_on_gpu_mat_mul_opt1();
-            } if (shader_name == "mat_mul_opt2") {
-                multiplier.run_multiply_on_gpu_mat_mul_opt2();
-            }
+    cout << "Running multiplication only for Metal shader: " << shader_name << endl;
+    int loop_count = 200;
+    float microsec_per_call;
+    microsec_per_call = benchmark(loop_count, [&] () {
+        // Perform the multiplication
+        if (shader_name == "mat_mul_opt1") {
+            multiplier.run_multiply_on_gpu_mat_mul_opt1();
+        } if (shader_name == "mat_mul_opt2") {
+            multiplier.run_multiply_on_gpu_mat_mul_opt2();
         }
-        auto t1 = high_resolution_clock::now();
-        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
-        double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
-        cout << gflops << " GFLOPS" << endl;
-        cout << "GPU Multiplication: " << time_in_usec*1e-3 << " milliseconds" << endl;
-        cout << "\n-------------------------\n" << endl;
-    }
+    });
+    cout << matmul_time_to_gflops(rows_X, cols_X, inner_dim, microsec_per_call) << " GFLOPS" << endl;
+    cout << "\n-------------------------\n" << endl;
     
-
-    
-    {
-        cout << "Running multipliation and touch data for Metal shader: " << shader_name <<  endl;
-        using namespace std::chrono;
-        auto t0 = high_resolution_clock::now();
-        int loop_count = 200;
-        for (int n = 0; n != loop_count; ++n)
-        {
-            // Modify a tiny part of the matrix data.
-            multiplier.touch_data_cpu();
-            // Perform the multiplication
-            if (shader_name == "mat_mul_opt1") {
-                multiplier.run_multiply_on_gpu_mat_mul_opt1();
-            } if (shader_name == "mat_mul_opt2") {
-                multiplier.run_multiply_on_gpu_mat_mul_opt2();
-            }
+    cout << "Running multipliation and touch data for Metal shader: " << shader_name <<  endl;
+    microsec_per_call = benchmark(loop_count, [&] () {
+        // Modify a tiny part of the matrix data.
+        multiplier.touch_data_cpu();
+        // Perform the multiplication
+        if (shader_name == "mat_mul_opt1") {
+            multiplier.run_multiply_on_gpu_mat_mul_opt1();
+        } if (shader_name == "mat_mul_opt2") {
+            multiplier.run_multiply_on_gpu_mat_mul_opt2();
         }
-        auto t1 = high_resolution_clock::now();
-        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
-        double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
-        cout << gflops << " GFLOPS" << endl;
-        cout << "CPU touch + Multiplication: " << time_in_usec*1e-3 << " milliseconds" << endl;
-        cout << "\n-------------------------\n" << endl;
-    }
+    });
+    cout << matmul_time_to_gflops(rows_X, cols_X, inner_dim, microsec_per_call) << " GFLOPS" << endl;
+    cout << "CPU touch + Multiplication: " << microsec_per_call*1e-3 << " milliseconds" << endl;
+    cout << "\n-------------------------\n" << endl;
     
-    {
-        cout << "Running multipliation and relu data for Metal shader: " << shader_name <<  endl;
-        using namespace std::chrono;
-        auto t0 = high_resolution_clock::now();
-        int loop_count = 200;
-        for (int n = 0; n != loop_count; ++n)
-        {
-            // Modify a tiny part of the matrix data.
-            multiplier.relu_cpu();
-            // Perform the multiplication
-            if (shader_name == "mat_mul_opt1") {
-                multiplier.run_multiply_on_gpu_mat_mul_opt1();
-            } if (shader_name == "mat_mul_opt2") {
-                multiplier.run_multiply_on_gpu_mat_mul_opt2();
-            }
+    cout << "Running multipliation and relu data for Metal shader: " << shader_name <<  endl;
+    microsec_per_call = benchmark(loop_count, [&] () {
+        multiplier.relu_cpu();
+        // Perform the multiplication
+        if (shader_name == "mat_mul_opt1") {
+            multiplier.run_multiply_on_gpu_mat_mul_opt1();
+        } if (shader_name == "mat_mul_opt2") {
+            multiplier.run_multiply_on_gpu_mat_mul_opt2();
         }
-        auto t1 = high_resolution_clock::now();
-        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
-        double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
-        cout << gflops << " GFLOPS" << endl;
-        cout << "Relu (CPU) + multiplication: " << time_in_usec*1e-3 << " milliseconds" << endl;
-        cout << "\n-------------------------\n" << endl;
-    }
+    });
+    cout << matmul_time_to_gflops(rows_X, cols_X, inner_dim, microsec_per_call) << " GFLOPS" << endl;
+    cout << "Relu (CPU) + multiplication: " << microsec_per_call*1e-3 << " milliseconds" << endl;
+    cout << "\n-------------------------\n" << endl;
     
-    {
-        cout << "Running CPU relu" <<  endl;
-        using namespace std::chrono;
-        auto t0 = high_resolution_clock::now();
-        int loop_count = 200;
-        for (int n = 0; n != loop_count; ++n)
-        {
-            // Modify a tiny part of the matrix data.
-            multiplier.relu_cpu();
-            
-        }
-        auto t1 = high_resolution_clock::now();
-        auto time_in_usec = duration_cast<microseconds>(t1 - t0).count();
-        //double gflops = 2e-3 * static_cast<double>(loop_count)  * static_cast<double>(rows_X) * static_cast<double>(cols_X) * static_cast<double>(inner_dim) / static_cast<double>(time_in_usec);
-        //cout << gflops << " GFLOPS" << endl;
-        cout << "Relu only (CPU): " << time_in_usec*1e-3 << " milliseconds" << endl;
-        cout << "\n-------------------------\n" << endl;
-    }
-    
+    cout << "Running CPU relu" <<  endl;
+    microsec_per_call = benchmark(loop_count, [&] () {
+        multiplier.relu_cpu();
+    });
+    cout << "Relu only (CPU): " << microsec_per_call*1e-3 << " milliseconds" << endl;
+    cout << "\n-------------------------\n" << endl;
 }
 
 int main(int argc, char *argv[])

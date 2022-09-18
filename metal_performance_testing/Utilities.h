@@ -113,6 +113,28 @@ void assert_almost_equal_relative_error(const MatrixF &A, const MatrixF &B, floa
  */
 float assert_almost_equal_max_error(const MatrixF &A, const MatrixF &B, float tolerance = 1.0e-3f);
 
+/*
+ * Given a loop count and a function, call the function loop_count
+ * times and print the mean time per call.
+ *
+ * Returns:
+ #  The mean time per call in microseconds.
+ */
+template <typename Func>
+float benchmark(int loop_count, Func func) {
+    // Warmup:
+    func();
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int n = 0; n != loop_count; ++n) {
+        func();
+    }
+    auto t1 = std::chrono::high_resolution_clock::now();
+    auto time_in_microseconds = duration_cast<std::chrono::microseconds>(t1 - t0).count();
+    float time_per_call = static_cast<float>(time_in_microseconds)/static_cast<float>(loop_count);
+    std::cout << "Time per call: " << time_per_call << " microseconds" << std::endl;
+    return time_per_call;
+}
+
 /**
  * Return the maximum value.
  */
